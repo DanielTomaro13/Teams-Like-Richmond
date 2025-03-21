@@ -753,6 +753,16 @@ richmond_premiership_avg <- richmond_yearly_averages %>%
 
 # Function to calculate Euclidean distance between a team and the Richmond model
 # We'll normalize values to account for different scales across metrics
+
+# Euclidean distance is a useful method for measuring the similarity between two sports teams because it provides a 
+# straightforward way to quantify the overall difference between them based on numerical performance metrics. 
+# By representing each team as a vector of statistics—such as goals, disposals, tackles, and marks—Euclidean 
+# distance calculates the straight-line distance between these vectors in multi-dimensional space. 
+# This results in a single number that reflects how similar or different the teams are across all the selected metrics. 
+# A smaller distance indicates greater similarity, while a larger distance suggests more significant 
+# differences in performance. It’s a simple, intuitive, and computationally efficient approach for comparing 
+# teams based on multiple quantitative features.
+
 calculate_richmond_similarity <- function(team_data, richmond_model, key_stats) {
   team_subset <- team_data %>% select(team_name, all_of(key_stats))
   richmond_subset <- richmond_model %>% select(all_of(key_stats))
