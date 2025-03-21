@@ -3,7 +3,7 @@
     "path": "~/Documents/Projects/AFL-fitzRoy/Teams-Like-Richmond/Teams-Like-Richmond/Teams-Like-Richmond.R",
     "project_path": "Teams-Like-Richmond.R",
     "type": "r_source",
-    "hash": "1516040625",
+    "hash": "3968406443",
     "contents": "",
     "dirty": false,
     "created": 1742595929371.0,
@@ -13,15 +13,15 @@
         "tempName": "Untitled1",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "511,45",
-        "scrollLine": "484"
+        "cursorPosition": "906,0",
+        "scrollLine": "881"
     },
     "folds": "",
-    "lastKnownWriteTime": 1742598768,
+    "lastKnownWriteTime": 1742599507,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1742598768814,
+    "last_content_update": 1742599507117,
     "read_only": false,
     "read_only_alternatives": []
 }

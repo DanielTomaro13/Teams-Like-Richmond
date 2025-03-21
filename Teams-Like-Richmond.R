@@ -510,10 +510,400 @@ print(richmond_finals_vs_regular %>% select(season, tackles_diff_pct, pressure_a
 #########
 # Hawthorn seem to have the most similar play style according to the eye test and I hypothesize that they are the team
 # most set up to replicate Richmond's success
+afl_2024 <- fetch_results_afl(2024)
+afl_2024_players <- fetch_player_stats(season = 2024, source = "AFL", comp = "AFLM")
 
+afl_2025 <- fetch_results_afl(2025)
+afl_2025_players <- fetch_player_stats(season = 2025, source = "AFL", comp = "AFLM")
 
+afl_2024_clean <- afl_2024 %>%
+  mutate(
+    date = as.Date(match.date, format = '%d/%m/%y'),
+    season = 2024,
+    round = round.roundNumber,
+    match_id = match.matchId,
+    venue = venue.name,
+    home_team = match.homeTeam.name,
+    home_id = match.homeTeamId,
+    home_goals = homeTeamScore.matchScore.goals,
+    home_behinds = homeTeamScore.matchScore.behinds,
+    home_total = homeTeamScore.matchScore.totalScore,
+    away_team = match.awayTeam.name,
+    away_id = match.awayTeamId,
+    away_goals = awayTeamScore.matchScore.goals,
+    away_behinds = awayTeamScore.matchScore.behinds,
+    away_total = awayTeamScore.matchScore.totalScore,
+    home_win = home_total > away_total
+  ) %>%
+  select(
+    date, season, round, match_id, venue,
+    home_team, home_id, home_goals, home_behinds, home_total,
+    away_team, away_id, away_goals, away_behinds, away_total,
+    home_win
+  )
 
+afl_2025_clean <- afl_2025 %>%
+  mutate(
+    date = as.Date(match.date, format = '%d/%m/%y'),
+    season = 2025,
+    round = round.roundNumber,
+    match_id = match.matchId,
+    venue = venue.name,
+    home_team = match.homeTeam.name,
+    home_id = match.homeTeamId,
+    home_goals = homeTeamScore.matchScore.goals,
+    home_behinds = homeTeamScore.matchScore.behinds,
+    home_total = homeTeamScore.matchScore.totalScore,
+    away_team = match.awayTeam.name,
+    away_id = match.awayTeamId,
+    away_goals = awayTeamScore.matchScore.goals,
+    away_behinds = awayTeamScore.matchScore.behinds,
+    away_total = awayTeamScore.matchScore.totalScore,
+    home_win = home_total > away_total
+  ) %>%
+  select(
+    date, season, round, match_id, venue,
+    home_team, home_id, home_goals, home_behinds, home_total,
+    away_team, away_id, away_goals, away_behinds, away_total,
+    home_win
+  )
 
+afl_2024_players_clean <- afl_2024_players %>%
+  mutate(
+    season = 2024,
+    round = round.roundNumber,
+    team_name = team.name,
+    player_name = paste(player.givenName, player.surname),
+    player_id = player.playerId
+  ) %>%
+  select(
+    season, round, team_name, player_name, player_id,
+    kicks, handballs, disposals, marks, tackles, 
+    contested_possessions = contestedPossessions,
+    uncontested_possessions = uncontestedPossessions,
+    inside50s, rebound50s, clearances = clearances.totalClearances,
+    metres_gained = metresGained,
+    score_involvements = scoreInvolvements,
+    turnovers, intercepts, tackles_inside50 = tacklesInside50,
+    pressure_acts = extendedStats.pressureActs,
+    ground_ball_gets = extendedStats.groundBallGets,
+    contested_marks = contestedMarks,
+    one_percenters = onePercenters,
+    disposal_efficiency = disposalEfficiency,
+    clangers
+  )
+
+afl_2025_players_clean <- afl_2025_players %>%
+  mutate(
+    season = 2025,
+    round = round.roundNumber,
+    team_name = team.name,
+    player_name = paste(player.givenName, player.surname),
+    player_id = player.playerId
+  ) %>%
+  select(
+    season, round, team_name, player_name, player_id,
+    kicks, handballs, disposals, marks, tackles, 
+    contested_possessions = contestedPossessions,
+    uncontested_possessions = uncontestedPossessions,
+    inside50s, rebound50s, clearances = clearances.totalClearances,
+    metres_gained = metresGained,
+    score_involvements = scoreInvolvements,
+    turnovers, intercepts, tackles_inside50 = tacklesInside50,
+    pressure_acts = extendedStats.pressureActs,
+    ground_ball_gets = extendedStats.groundBallGets,
+    contested_marks = contestedMarks,
+    one_percenters = onePercenters,
+    disposal_efficiency = disposalEfficiency,
+    clangers
+  )
+
+team_stats_2024 <- afl_2024_players_clean %>%
+  group_by(season, round, team_name) %>%
+  summarize(
+    kicks = sum(kicks, na.rm = TRUE),
+    handballs = sum(handballs, na.rm = TRUE),
+    disposals = sum(disposals, na.rm = TRUE),
+    marks = sum(marks, na.rm = TRUE),
+    tackles = sum(tackles, na.rm = TRUE),
+    contested_possessions = sum(contested_possessions, na.rm = TRUE),
+    uncontested_possessions = sum(uncontested_possessions, na.rm = TRUE),
+    inside50s = sum(inside50s, na.rm = TRUE),
+    rebound50s = sum(rebound50s, na.rm = TRUE),
+    clearances = sum(clearances, na.rm = TRUE),
+    metres_gained = sum(metres_gained, na.rm = TRUE),
+    score_involvements = sum(score_involvements, na.rm = TRUE),
+    turnovers = sum(turnovers, na.rm = TRUE),
+    intercepts = sum(intercepts, na.rm = TRUE),
+    tackles_inside50 = sum(tackles_inside50, na.rm = TRUE),
+    pressure_acts = sum(pressure_acts, na.rm = TRUE),
+    ground_ball_gets = sum(ground_ball_gets, na.rm = TRUE),
+    contested_marks = sum(contested_marks, na.rm = TRUE),
+    one_percenters = sum(one_percenters, na.rm = TRUE),
+    disposal_efficiency = mean(disposal_efficiency, na.rm = TRUE),
+    clangers = sum(clangers, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+team_stats_2025 <- afl_2025_players_clean %>%
+  group_by(season, round, team_name) %>%
+  summarize(
+    kicks = sum(kicks, na.rm = TRUE),
+    handballs = sum(handballs, na.rm = TRUE),
+    disposals = sum(disposals, na.rm = TRUE),
+    marks = sum(marks, na.rm = TRUE),
+    tackles = sum(tackles, na.rm = TRUE),
+    contested_possessions = sum(contested_possessions, na.rm = TRUE),
+    uncontested_possessions = sum(uncontested_possessions, na.rm = TRUE),
+    inside50s = sum(inside50s, na.rm = TRUE),
+    rebound50s = sum(rebound50s, na.rm = TRUE),
+    clearances = sum(clearances, na.rm = TRUE),
+    metres_gained = sum(metres_gained, na.rm = TRUE),
+    score_involvements = sum(score_involvements, na.rm = TRUE),
+    turnovers = sum(turnovers, na.rm = TRUE),
+    intercepts = sum(intercepts, na.rm = TRUE),
+    tackles_inside50 = sum(tackles_inside50, na.rm = TRUE),
+    pressure_acts = sum(pressure_acts, na.rm = TRUE),
+    ground_ball_gets = sum(ground_ball_gets, na.rm = TRUE),
+    contested_marks = sum(contested_marks, na.rm = TRUE),
+    one_percenters = sum(one_percenters, na.rm = TRUE),
+    disposal_efficiency = mean(disposal_efficiency, na.rm = TRUE),
+    clangers = sum(clangers, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+team_avg_2024 <- team_stats_2024 %>%
+  group_by(team_name) %>%
+  summarize(
+    games = n(),
+    kicks_avg = mean(kicks),
+    handballs_avg = mean(handballs),
+    disposals_avg = mean(disposals),
+    marks_avg = mean(marks),
+    tackles_avg = mean(tackles),
+    contested_possessions_avg = mean(contested_possessions),
+    uncontested_possessions_avg = mean(uncontested_possessions),
+    inside50s_avg = mean(inside50s),
+    rebound50s_avg = mean(rebound50s),
+    clearances_avg = mean(clearances),
+    metres_gained_avg = mean(metres_gained),
+    score_involvements_avg = mean(score_involvements),
+    turnovers_avg = mean(turnovers),
+    intercepts_avg = mean(intercepts),
+    tackles_inside50_avg = mean(tackles_inside50),
+    pressure_acts_avg = mean(pressure_acts),
+    ground_ball_gets_avg = mean(ground_ball_gets),
+    contested_marks_avg = mean(contested_marks),
+    one_percenters_avg = mean(one_percenters),
+    disposal_efficiency_avg = mean(disposal_efficiency),
+    clangers_avg = mean(clangers),
+    contested_uncontested_ratio = mean(contested_possessions)/mean(uncontested_possessions),
+    kick_handball_ratio = mean(kicks)/mean(handballs)
+  )
+
+team_avg_2025 <- team_stats_2025 %>%
+  group_by(team_name) %>%
+  summarize(
+    games = n(),
+    kicks_avg = mean(kicks),
+    handballs_avg = mean(handballs),
+    disposals_avg = mean(disposals),
+    marks_avg = mean(marks),
+    tackles_avg = mean(tackles),
+    contested_possessions_avg = mean(contested_possessions),
+    uncontested_possessions_avg = mean(uncontested_possessions),
+    inside50s_avg = mean(inside50s),
+    rebound50s_avg = mean(rebound50s),
+    clearances_avg = mean(clearances),
+    metres_gained_avg = mean(metres_gained),
+    score_involvements_avg = mean(score_involvements),
+    turnovers_avg = mean(turnovers),
+    intercepts_avg = mean(intercepts),
+    tackles_inside50_avg = mean(tackles_inside50),
+    pressure_acts_avg = mean(pressure_acts),
+    ground_ball_gets_avg = mean(ground_ball_gets),
+    contested_marks_avg = mean(contested_marks),
+    one_percenters_avg = mean(one_percenters),
+    disposal_efficiency_avg = mean(disposal_efficiency),
+    clangers_avg = mean(clangers),
+    contested_uncontested_ratio = mean(contested_possessions)/mean(uncontested_possessions),
+    kick_handball_ratio = mean(kicks)/mean(handballs)
+  )
+
+####### 
+# The Richmond Model
+#######
+key_richmond_stats <- c(
+  "tackles_avg", 
+  "pressure_acts_avg", 
+  "tackles_inside50_avg", 
+  "ground_ball_gets_avg", 
+  "contested_possessions_avg", 
+  "inside50s_avg",
+  "intercepts_avg",
+  "contested_uncontested_ratio",
+  "kick_handball_ratio"
+)
+
+richmond_premiership_avg <- richmond_yearly_averages %>%
+  summarize(
+    across(everything(), mean)
+  ) %>%
+  select(all_of(key_richmond_stats))
+
+# Function to calculate Euclidean distance between a team and the Richmond model
+# We'll normalize values to account for different scales across metrics
+calculate_richmond_similarity <- function(team_data, richmond_model, key_stats) {
+  team_subset <- team_data %>% select(team_name, all_of(key_stats))
+  richmond_subset <- richmond_model %>% select(all_of(key_stats))
+  
+  distances <- team_subset %>%
+    rowwise() %>%
+    mutate(
+      tack_dist = (tackles_avg - richmond_subset$tackles_avg)^2 / richmond_subset$tackles_avg^2,
+      press_dist = (pressure_acts_avg - richmond_subset$pressure_acts_avg)^2 / richmond_subset$pressure_acts_avg^2,
+      tack50_dist = (tackles_inside50_avg - richmond_subset$tackles_inside50_avg)^2 / richmond_subset$tackles_inside50_avg^2,
+      gbg_dist = (ground_ball_gets_avg - richmond_subset$ground_ball_gets_avg)^2 / richmond_subset$ground_ball_gets_avg^2,
+      cont_dist = (contested_possessions_avg - richmond_subset$contested_possessions_avg)^2 / richmond_subset$contested_possessions_avg^2,
+      i50_dist = (inside50s_avg - richmond_subset$inside50s_avg)^2 / richmond_subset$inside50s_avg^2,
+      int_dist = (intercepts_avg - richmond_subset$intercepts_avg)^2 / richmond_subset$intercepts_avg^2,
+      c_unc_dist = (contested_uncontested_ratio - richmond_subset$contested_uncontested_ratio)^2 / richmond_subset$contested_uncontested_ratio^2,
+      k_h_dist = (kick_handball_ratio - richmond_subset$kick_handball_ratio)^2 / richmond_subset$kick_handball_ratio^2,
+      
+      total_distance = sqrt(tack_dist + press_dist + tack50_dist + gbg_dist + cont_dist + 
+                              i50_dist + int_dist + c_unc_dist + k_h_dist),
+
+            similarity_score = 1 / (1 + total_distance) * 100
+    ) %>%
+    ungroup() %>%
+    arrange(desc(similarity_score))
+  
+  return(distances)
+}
+
+team_similarity_2024 <- calculate_richmond_similarity(
+  team_avg_2024, 
+  richmond_premiership_avg,
+  key_richmond_stats
+)
+team_similarity_2024
+
+team_similarity_2025 <- calculate_richmond_similarity(
+  team_avg_2025, 
+  richmond_premiership_avg,
+  key_richmond_stats
+)
+team_similarity_2025
+
+top_2024_teams <- team_similarity_2024 %>%
+  select(team_name, similarity_score) %>%
+  arrange(desc(similarity_score)) %>%
+  mutate(rank = row_number())
+top_2024_teams
+
+top_2025_teams <- team_similarity_2025 %>%
+  select(team_name, similarity_score) %>%
+  arrange(desc(similarity_score)) %>%
+  mutate(rank = row_number())
+top_2025_teams
+
+ggplot(top_2024_teams, aes(x = reorder(team_name, similarity_score), y = similarity_score)) +
+  geom_col(fill = "#FFCD00") +
+  coord_flip() +
+  labs(
+    title = "2024 AFL Teams Similarity to Richmond's 2017-2020 Model",
+    x = "Team",
+    y = "Similarity Score (higher = more similar)"
+  ) +
+  theme_minimal()
+
+ggplot(top_2025_teams, aes(x = reorder(team_name, similarity_score), y = similarity_score)) +
+  geom_col(fill = "#FFCD00") +
+  coord_flip() +
+  labs(
+    title = "2025 AFL Teams Similarity to Richmond's 2017-2020 Model",
+    x = "Team",
+    y = "Similarity Score (higher = more similar)"
+  ) +
+  theme_minimal()
+
+top_3_teams_2024 <- top_2024_teams %>%
+  slice_head(n = 3) %>%
+  pull(team_name)
+top_3_teams_2024
+
+top_3_teams_2025 <- top_2025_teams %>%
+  slice_head(n = 3) %>%
+  pull(team_name)
+top_3_teams_2025
+
+detailed_2024 <- team_stats_2024 %>%
+  filter(team_name %in% top_3_teams_2024) %>%
+  group_by(team_name) %>%
+  summarize(
+    tackles_avg = mean(tackles),
+    pressure_acts_avg = mean(pressure_acts),
+    tackles_inside50_avg = mean(tackles_inside50),
+    ground_ball_gets_avg = mean(ground_ball_gets),
+    contested_possessions_avg = mean(contested_possessions),
+    inside50s_avg = mean(inside50s),
+    intercepts_avg = mean(intercepts),
+    contested_uncontested_ratio = mean(contested_possessions)/mean(uncontested_possessions),
+    kick_handball_ratio = mean(kicks)/mean(handballs)
+  )
+detailed_2024
+
+detailed_2025 <- team_stats_2025 %>%
+  filter(team_name %in% top_3_teams_2025) %>%
+  group_by(team_name) %>%
+  summarize(
+    tackles_avg = mean(tackles),
+    pressure_acts_avg = mean(pressure_acts),
+    tackles_inside50_avg = mean(tackles_inside50),
+    ground_ball_gets_avg = mean(ground_ball_gets),
+    contested_possessions_avg = mean(contested_possessions),
+    inside50s_avg = mean(inside50s),
+    intercepts_avg = mean(intercepts),
+    contested_uncontested_ratio = mean(contested_possessions)/mean(uncontested_possessions),
+    kick_handball_ratio = mean(kicks)/mean(handballs)
+  )
+detailed_2025
+
+detailed_2024 %>%
+  pivot_longer(cols = -team_name, names_to = "statistic", values_to = "value") %>%
+  ggplot(aes(x = statistic, y = value, fill = team_name)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_hline(data = richmond_premiership_avg %>% 
+               pivot_longer(cols = everything(), names_to = "statistic", values_to = "richmond_value"),
+             aes(yintercept = richmond_value), linetype = "dashed", color = "black") +
+  facet_wrap(~statistic, scales = "free_y") +
+  theme_minimal() +
+  labs(
+    title = "Top 3 Richmond-like Teams in 2024 vs Richmond 2017-2020",
+    subtitle = "Dashed line represents Richmond's 2017-2020 average",
+    x = NULL,
+    y = "Value",
+    fill = "Team"
+  ) +
+  theme(axis.text.x = element_blank())
+
+detailed_2025 %>%
+  pivot_longer(cols = -team_name, names_to = "statistic", values_to = "value") %>%
+  ggplot(aes(x = statistic, y = value, fill = team_name)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_hline(data = richmond_premiership_avg %>% 
+               pivot_longer(cols = everything(), names_to = "statistic", values_to = "richmond_value"),
+             aes(yintercept = richmond_value), linetype = "dashed", color = "black") +
+  facet_wrap(~statistic, scales = "free_y") +
+  theme_minimal() +
+  labs(
+    title = "Top 3 Richmond-like Teams in 2025 vs Richmond 2017-2020",
+    subtitle = "Dashed line represents Richmond's 2017-2020 average",
+    x = NULL,
+    y = "Value",
+    fill = "Team"
+  ) +
+  theme(axis.text.x = element_blank())
 
 
 
