@@ -9,6 +9,9 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 library(ggplot2)
+library(igraph)
+library(ggraph)
+library(tidyverse)
 ########
 # Get Richmond Results
 ########
@@ -1696,10 +1699,103 @@ ggplot(dynasty_performance, aes(x = team, y = avg_margin, fill = team)) +
   ) +
   theme_minimal() +
   scale_fill_manual(values = c("Hawthorn" = "brown", "Richmond" = "yellow", "Brisbane Lions" = "maroon"))
+######
+# Making Coaching Trees
+######
+# VFL turned into AFL in 1990 so we will look at premiership coaches from then
+afl_premierships <- data.frame(
+  Year = 1990:2024,
+  Team = c(
+    "Collingwood", "Hawthorn", "West Coast", "Essendon", "West Coast",
+    "Carlton", "North Melbourne", "Adelaide", "Adelaide", "Kangaroos",
+    "Essendon", "Brisbane Lions", "Brisbane Lions", "Brisbane Lions", "Port Adelaide",
+    "Sydney", "West Coast", "Geelong", "Hawthorn", "Geelong",
+    "Collingwood", "Geelong", "Sydney", "Hawthorn", "Hawthorn",
+    "Hawthorn", "Western Bulldogs", "Richmond", "West Coast", "Richmond",
+    "Richmond", "Melbourne", "Geelong", "Collingwood", "Brisbane Lions"
+  ),
+  Captain = c(
+    "Tony Shaw", "Michael Tuck", "John Worsfold", "Mark Thompson", "John Worsfold",
+    "Stephen Kernahan", "Wayne Carey", "Mark Bickley", "Mark Bickley", "Wayne Carey",
+    "James Hird", "Michael Voss", "Michael Voss", "Michael Voss", "Warren Tredrea",
+    "Barry Hall", "Chris Judd", "Tom Harley", "Sam Mitchell", "Tom Harley",
+    "Nick Maxwell", "Cameron Ling", "Jarrad McVeigh", "Luke Hodge", "Luke Hodge",
+    "Luke Hodge", "Easton Wood", "Trent Cotchin", "Shannon Hurn", "Trent Cotchin",
+    "Trent Cotchin", "Max Gawn", "Joel Selwood", "Darcy Moore", "Harris Andrews"
+  ),
+  Coach = c(
+    "Leigh Matthews", "Alan Joyce", "Mick Malthouse", "Kevin Sheedy", "Mick Malthouse",
+    "David Parkin", "Denis Pagan", "Malcolm Blight", "Malcolm Blight", "Denis Pagan",
+    "Kevin Sheedy", "Leigh Matthews", "Leigh Matthews", "Leigh Matthews", "Mark Williams",
+    "Paul Roos", "John Worsfold", "Mark Thompson", "Alastair Clarkson", "Mark Thompson",
+    "Mick Malthouse", "Chris Scott", "John Longmire", "Alastair Clarkson", "Alastair Clarkson",
+    "Alastair Clarkson", "Luke Beveridge", "Damien Hardwick", "Adam Simpson", "Damien Hardwick",
+    "Damien Hardwick", "Simon Goodwin", "Chris Scott", "Craig McRae", "Chris Fagan"
+  )
+)
 
+print(afl_premierships)
 
+# AFL Coaching Tree Visualization
+afl_coaching_data <- tribble(
+  ~coach,                ~mentor,
+  "Alastair Clarkson",   NA,                       # Starting point - no mentor listed 
+  "Damien Hardwick",     "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
+  "Luke Beveridge",      "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
+  "Adam Simpson",        "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
+  "Chris Fagan",         "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
+  "Brendon Bolton",      "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
+  "Leon Cameron",        "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
+  "Brett Ratten",        "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
+  "John Longmire",       "Paul Roos",              # Worked under Roos at Sydney
+  "Michael Voss",        "Leigh Matthews",         # Played under Matthews at Brisbane
+  "Craig McRae",         "Damien Hardwick",        # Worked under Hardwick at Richmond
+  "Stuart Dew",          "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
+  "Sam Mitchell",        "Alastair Clarkson",      # Played and worked under Clarkson
+  "Ken Hinkley",         "Mark Williams",          # Worked under Williams at Port
+  "Justin Longmuir",     "Ross Lyon",              # Worked under Lyon at Fremantle
+  "Mark Thompson",       "Kevin Sheedy",           # Played under Sheedy at Essendon
+  "Paul Roos",           "Rodney Eade",            # Connection point
+  "Ross Lyon",           "Paul Roos",              # Worked with Roos at Sydney
+  "Kevin Sheedy",        NA,                       # Another starting point
+  "Leigh Matthews",      NA,                       # Another starting point
+  "Rodney Eade",         NA,                       # Another starting point
+  "Mark Williams",       NA                        # Another starting point
+)
 
+# The NA could be Dennis Pagan
 
+coaching_graph <- graph_from_data_frame(afl_coaching_data, directed = TRUE)
 
+V(coaching_graph)$size <- degree(coaching_graph, mode = "in") * 3 + 10
+V(coaching_graph)$label <- V(coaching_graph)$name
+
+V(coaching_graph)$generation <- 0
+roots <- V(coaching_graph)[degree(coaching_graph, mode = "out") == 0]
+
+for(v in V(coaching_graph)) {
+  paths_to_roots <- shortest_paths(coaching_graph, from = v, to = roots, mode = "out")
+  min_path_length <- min(sapply(paths_to_roots$vpath, length))
+  V(coaching_graph)[v]$generation <- min_path_length - 1
+}
+
+gen_colors <- c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b")
+V(coaching_graph)$color <- gen_colors[(V(coaching_graph)$generation %% length(gen_colors)) + 1]
+
+set.seed(123) # For reproducibility
+
+ggraph(coaching_graph, layout = "sugiyama") + 
+  geom_edge_link(arrow = arrow(length = unit(4, 'mm')), 
+                 end_cap = circle(3, 'mm'),
+                 start_cap = circle(3, 'mm'),
+                 alpha = 0.7) + 
+  geom_node_point(aes(size = size, color = factor(generation))) +
+  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  scale_color_manual(values = gen_colors, name = "Generation") +
+  scale_size_continuous(range = c(5, 15), name = "Influence\n(coaches produced)") +
+  theme_graph() +
+  labs(title = "AFL Coaching Tree",
+       subtitle = "Relationships between coaches and their mentors",
+       caption = "Node size represents number of coaches produced")
 
 
