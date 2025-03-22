@@ -1736,39 +1736,69 @@ afl_premierships <- data.frame(
 
 print(afl_premierships)
 
-# AFL Coaching Tree Visualization
-afl_coaching_data <- tribble(
-  ~coach,                ~mentor,
-  "Alastair Clarkson",   NA,                       # Starting point - no mentor listed 
-  "Damien Hardwick",     "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
-  "Luke Beveridge",      "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
-  "Adam Simpson",        "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
-  "Chris Fagan",         "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
-  "Brendon Bolton",      "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
-  "Leon Cameron",        "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
-  "Brett Ratten",        "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
-  "John Longmire",       "Paul Roos",              # Worked under Roos at Sydney
-  "Michael Voss",        "Leigh Matthews",         # Played under Matthews at Brisbane
-  "Craig McRae",         "Damien Hardwick",        # Worked under Hardwick at Richmond
-  "Stuart Dew",          "Alastair Clarkson",      # Worked under Clarkson at Hawthorn
-  "Sam Mitchell",        "Alastair Clarkson",      # Played and worked under Clarkson
-  "Ken Hinkley",         "Mark Williams",          # Worked under Williams at Port
-  "Justin Longmuir",     "Ross Lyon",              # Worked under Lyon at Fremantle
-  "Mark Thompson",       "Kevin Sheedy",           # Played under Sheedy at Essendon
-  "Paul Roos",           "Rodney Eade",            # Connection point
-  "Ross Lyon",           "Paul Roos",              # Worked with Roos at Sydney
-  "Kevin Sheedy",        NA,                       # Another starting point
-  "Leigh Matthews",      NA,                       # Another starting point
-  "Rodney Eade",         NA,                       # Another starting point
-  "Mark Williams",       NA                        # Another starting point
-)
+# AFL Coaching Tree Visualization - John Kennedy Sr. Legacy
+# Based on the article from The Roar
 
-# The NA could be Dennis Pagan
+# Load required libraries
+library(igraph)      # For network creation and visualization
+library(ggplot2)     # For plotting
+library(ggraph)      # For graph visualization
+library(tidyverse)   # For data manipulation
+
+afl_coaching_data <- tribble(
+  # The four foundational coaches mentioned in the article 
+  # https://www.theroar.com.au/2021/02/08/afl-coaching-trees-john-kennedy-snr/
+  ~coach,                 ~mentor,
+  "John Kennedy Sr",      NA,                       # Foundational coach
+  "Ron Barassi",          NA,                       # Foundational coach
+  "Tommy Hafey",          NA,                       # Foundational coach
+  "Allan Jeans",          NA,                       # Foundational coach
+  
+  # Kennedy tree
+  "David Parkin",         "John Kennedy Sr",        # Captain under Kennedy, successor
+  "Allan Joyce",          "John Kennedy Sr",        # Played in Kennedy's first flag
+  "Peter Knights",        "Allan Jeans",            # Played under Jeans, mentioned in article
+  "Leigh Matthews",       "John Kennedy Sr",        # Kennedy acolyte, also influenced by Parkin and Jeans
+  
+  # Matthews connections
+  "Chris Scott",          "Leigh Matthews",         # Mentioned in article
+  "Mark Williams",        "Leigh Matthews",         # Mentioned in article
+  
+  # Eade connections
+  "Rodney Eade",          "Allan Jeans",            # Played mostly under Jeans
+  "Paul Roos",            "Rodney Eade",            # Coached and mentored by Eade
+  
+  # North Melbourne connections
+  "Denis Pagan",          "John Kennedy Sr",        # Reserves coach under Kennedy at North
+  "John Longmire",        "Denis Pagan",            # Coached by Pagan
+  "Adam Simpson",         "Denis Pagan",            # Coached by Pagan
+  
+  # Modern Hawthorn dynasty
+  "Alastair Clarkson",    "John Kennedy Sr",        # Kennedy influence at North Melbourne
+  "Damien Hardwick",      "Alastair Clarkson",      # Assistant under Clarkson
+  "Luke Beveridge",       "Alastair Clarkson",      # Assistant under Clarkson
+  "Adam Simpson",         "Alastair Clarkson",      # Also worked under Clarkson
+  "Chris Fagan",          "Alastair Clarkson",      # Football operations under Clarkson
+  "Brendon Bolton",       "Alastair Clarkson",      # Assistant under Clarkson
+  "Leon Cameron",         "Alastair Clarkson",      # Assistant under Clarkson
+  "Brett Ratten",         "Alastair Clarkson",      # Assistant under Clarkson
+  
+  # Other key connections mentioned
+  "Kevin Sheedy",         "Tommy Hafey",            # Sheedy came up under Hafey
+  "Wayne Schimmelbusch",  "John Kennedy Sr",        # Kennedy coached at North
+  "Barry Cable",          NA,                       # North Melbourne coach mentioned
+  
+  # Additional connections from article
+  "Jack Hale",            NA,                       # Kennedy's coach
+  "Bob McCaskill",        NA                        # Early Hawthorn coach
+)
 
 coaching_graph <- graph_from_data_frame(afl_coaching_data, directed = TRUE)
 
 V(coaching_graph)$size <- degree(coaching_graph, mode = "in") * 3 + 10
 V(coaching_graph)$label <- V(coaching_graph)$name
+
+V(coaching_graph)$is_main <- V(coaching_graph)$name %in% c("John Kennedy Sr", "Ron Barassi", "Tommy Hafey", "Allan Jeans")
 
 V(coaching_graph)$generation <- 0
 roots <- V(coaching_graph)[degree(coaching_graph, mode = "out") == 0]
@@ -1779,23 +1809,69 @@ for(v in V(coaching_graph)) {
   V(coaching_graph)[v]$generation <- min_path_length - 1
 }
 
-gen_colors <- c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b")
-V(coaching_graph)$color <- gen_colors[(V(coaching_graph)$generation %% length(gen_colors)) + 1]
+V(coaching_graph)$era <- "Modern (2000+)"
+V(coaching_graph)[V(coaching_graph)$name %in% c(
+  "John Kennedy Sr", "Ron Barassi", "Tommy Hafey", "Allan Jeans", 
+  "Bob McCaskill", "Jack Hale"
+)]$era <- "Foundation (1950-1970s)"
 
-set.seed(123) # For reproducibility
+V(coaching_graph)[V(coaching_graph)$name %in% c(
+  "David Parkin", "Allan Joyce", "Peter Knights", "Leigh Matthews",
+  "Denis Pagan", "Kevin Sheedy", "Wayne Schimmelbusch", "Barry Cable",
+  "Rodney Eade"
+)]$era <- "Middle Era (1980s-1990s)"
+
+era_colors <- c("Foundation (1950-1970s)" = "#B22222",   # Firebrick
+                "Middle Era (1980s-1990s)" = "#228B22",  # Forest Green
+                "Modern (2000+)" = "#4169E1")            # Royal Blue
+
+V(coaching_graph)$shape <- ifelse(V(coaching_graph)$is_main, "square", "circle")
+V(coaching_graph)$frame.color <- ifelse(V(coaching_graph)$is_main, "gold", "gray")
+V(coaching_graph)$frame.width <- ifelse(V(coaching_graph)$is_main, 2, 0.5)
+
+set.seed(42) # For reproducibility
 
 ggraph(coaching_graph, layout = "sugiyama") + 
   geom_edge_link(arrow = arrow(length = unit(4, 'mm')), 
                  end_cap = circle(3, 'mm'),
                  start_cap = circle(3, 'mm'),
-                 alpha = 0.7) + 
-  geom_node_point(aes(size = size, color = factor(generation))) +
-  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
-  scale_color_manual(values = gen_colors, name = "Generation") +
-  scale_size_continuous(range = c(5, 15), name = "Influence\n(coaches produced)") +
-  theme_graph() +
-  labs(title = "AFL Coaching Tree",
-       subtitle = "Relationships between coaches and their mentors",
-       caption = "Node size represents number of coaches produced")
+                 alpha = 0.7,
+                 color = "gray40") + 
+  geom_node_point(aes(size = size, 
+                      color = era,
+                      shape = shape),
+                  stroke = 1.5) +
+  geom_node_text(aes(label = name), 
+                 repel = TRUE, 
+                 size = 3.5, 
+                 fontface = "bold") +
+  scale_color_manual(values = era_colors, name = "Coaching Era") +
+  scale_shape_manual(values = c("circle" = 19, "square" = 15), guide = "none") +
+  scale_size_continuous(range = c(5, 18), name = "Influence\n(coaches produced)") +
+  theme_graph(background = "white") +
+  labs(title = "AFL Coaching Tree: The John Kennedy Sr. Legacy",
+       subtitle = "Based on the article from The Roar - showing connections between coaches and their mentors",
+       caption = "Node size represents number of coaches produced | Square nodes represent the four foundational coaches")
 
+ggraph(coaching_graph, layout = "tree") + 
+  geom_edge_link(arrow = arrow(length = unit(4, 'mm')), 
+                 end_cap = circle(3, 'mm'),
+                 start_cap = circle(3, 'mm'),
+                 alpha = 0.7,
+                 color = "gray40") + 
+  geom_node_point(aes(size = size, 
+                      color = era,
+                      shape = shape),
+                  stroke = 1.5) +
+  geom_node_text(aes(label = name), 
+                 repel = TRUE, 
+                 size = 3.5, 
+                 fontface = "bold") +
+  scale_color_manual(values = era_colors, name = "Coaching Era") +
+  scale_shape_manual(values = c("circle" = 19, "square" = 15), guide = "none") +
+  scale_size_continuous(range = c(5, 18), name = "Influence\n(coaches produced)") +
+  theme_graph(background = "white") +
+  labs(title = "AFL Coaching Tree: Hierarchical View",
+       subtitle = "Alternative tree layout showing coaching lineages",
+       caption = "Node size represents number of coaches produced | Square nodes represent the four foundational coaches")
 
