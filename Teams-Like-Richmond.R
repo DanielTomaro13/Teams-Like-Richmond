@@ -1704,58 +1704,39 @@ ggplot(dynasty_performance, aes(x = team, y = avg_margin, fill = team)) +
 # Making Coaching Trees
 ######
 # AFL Coaching Tree Visualization
+# We have to be really strict here with the definition of a mentor. We have cases where individuals
+# Have played under prominent figures or exposed to multiple but we will use wikipedia and AFL knowledge
+# To imply who had the greatest impact. For example Leigh Matthews is related to Hafey, Kennedy Sr. Rose,
+# Parkin, and Jeans but it is known that Kennedy Sr. had the greatest impact.
 afl_coaching_data <- tibble(
   coach = c(
     'John Kennedy Sr.', "David Parkin", "Alan Joyce", "Allan Jeans", "Robert Walls",
     "Tony Jewell", "Alex Jesaulenko", "Ron Barassi", "Tom Hafey", "John Nicholls",
-    "John Coleman", "Norm Smith", "Bob Davis", "Phonse Kyne", "Charlie Sutton",
-    "Reg Hickey", "Dick Reynolds", "Frank Hughes", "Percy Bentley", "Jack Dyer",
-    "Jock Mchale", "Jack Bisset", "Charlie Clymo", "Albert Chadwick", "Cliff Rankin",
-    "Syd Barker Sr.", "Kevin Sheedy", "Denis Pagan", "Malcolm Blight", "Leigh Matthews",
+    "John Coleman", "Norm Smith",
+     "Dick Reynolds",  "Kevin Sheedy", "Denis Pagan", "Malcolm Blight", "Leigh Matthews",
     "Mark Williams", "John Worsfold", "Paul Roos", "Mark Thompson", "Mick Malthouse",
     "John Longmire", "Alastair Clarkson", "Luke Beveridge", "Damien Hardwick", "Adam Simpson",
     "Simon Goodwin", "Chirs Scott", "Craig McRae", "Chris Fagan"
   ),
   mentor = c(
-    "Jack Hale", "John Kennedy Sr.", "John Kennedy Sr.", NA, "Ron Barassi",
+    NA, "John Kennedy Sr.", "John Kennedy Sr.", NA, "Ron Barassi",
     "Tom Hafey", "Ron Barassi", "Norm Smith", NA, "Ron Barassi",
-    "Dick Reynolds", "Dick Reynolds", "Reg Hickey", "Jock Mchale", "Arthur Olliver",
-    "Cliff Rankin", NA, NA, NA, NA,
-    NA, NA, NA, NA, NA,
-    NA, "Tom Hafey", "Ron Barassi", "Ron Barassi", "John Kennedy Sr.",
-    "Fos Williams", "Mick Malthouse", "David Parkin", "Kevin Sheedy", "Tony Jewell",
-    "Paul Roos", "Malcolm Blight", "Alastair Clarkson", "Alastair Clarkson", "Denis Pagan",
-    "Paul Roos", "Leigh Matthews", "Mick Malthouse", "Alastair Clarkson"
+    "Dick Reynolds", "Dick Reynolds", 
+    NA,"Tom Hafey", NA, "Ron Barassi", "John Kennedy Sr.",
+    "Fos Williams", "Mick Malthouse", "David Parkin", "Kevin Sheedy", "Tom Hafey",
+    "Paul Roos", "Mark Williams", "Alastair Clarkson", "Alastair Clarkson", "Alastair Clarkson",
+    "Paul Roos", "Leigh Matthews", "Alastair Clarkson", "Alastair Clarkson"
   )
 )
-additional_mentors_data <- tibble(
-  coach = c(
-    "John Kennedy Sr.", "Robert Walls", "Reg Hickey", "Reg Hickey", "Kevin Sheedy", 
-    "Leigh Matthews", "Leigh Matthews", "Leigh Matthews", "Leigh Matthews",
-    "Mark Williams", "Mark Williams", "Mark Williams", "Mark Williams", 
-    "John Worsfold", "John Longmire", "John Longmire", "John Longmire", "John Longmire",
-    "Alastair Clarkson", "Alastair Clarkson", "Simon Goodwin", "Simon Goodwin", "Simon Goodwin",
-    "Craig McRae", "Craig McRae", "Craig McRae", "Craig McRae", "Chris Fagan"
-  ),
-  mentor = c(
-    "Bob McCaskill", "John Nicholls", "Arthur Coghlan", "Charlie Clymo", "Tony Jewell",
-    "Bob Rose", "David Parkin", "Allan Jeans", "Tom Hafey", 
-    "John Cahil", "Tom Hafey", "Leigh Matthews", "Kevin Sheedy",
-    "David Parkin", "Rodney Eade", "Denis Pagan", "Wayne Schimelbusch", "John Kennedy Sr.",
-    "Tim Watson", "Mark Williams", "Alastair Clarkson", "Malcolm Blight", "Gary Ayres",
-    "Damien Hardwick", "Terry Wallace", "Leigh Matthews", "Alastair Clarkson", "Neale Daniher"
-  )
-)
+
 
 primary_edges <- afl_coaching_data %>%
   select(coach, mentor) %>%
   filter(!is.na(mentor)) %>%
   rename(to = coach, from = mentor)
 
-additional_edges <- additional_mentors_data %>%
-  rename(to = coach, from = mentor)
 
-all_edges <- bind_rows(primary_edges, additional_edges)
+all_edges <- primary_edges
 
 g <- graph_from_data_frame(all_edges, directed = TRUE)
 
@@ -1767,61 +1748,10 @@ ggraph(g, layout = "sugiyama") +
   geom_node_text(aes(label = name), repel = TRUE, size = 3) +
   theme_void() +
   labs(title = "AFL Coaching Tree",
-       subtitle = "Mentoring relationships between AFL coaches")
+       subtitle = "Mentoring relationships between premiership winning AFL coaches")
 
-mentor_counts <- all_edges %>%
-  count(from, sort = TRUE) %>%
-  slice_head(n = 10)
-mentor_counts
+# Do some invidiual trees
 
-get_descendants <- function(graph, node) {
-  desc <- subcomponent(graph, node, mode = "out")
-  desc <- desc[desc != node]
-  return(names(desc))
-}
 
-all_mentors <- unique(all_edges$from)
 
-influence_data <- tibble(
-  mentor = all_mentors,
-  descendants = map(mentor, ~get_descendants(g, .)),
-  descendants_count = map_int(descendants, length)
-) %>%
-  arrange(desc(descendants_count)) %>%
-  slice_head(n = 10)
-
-root_nodes <- V(g)[degree(g, mode = "in") == 0]
-root_names <- names(root_nodes)
-
-calculate_depth <- function(graph, node) {
-  all_paths <- lapply(root_names, function(root) {
-    all_simple_paths(graph, from = root, to = node)
-  })
-    all_paths <- unlist(all_paths, recursive = FALSE)
-  if(length(all_paths) == 0) return(0)
-  
-  max_length <- max(sapply(all_paths, length)) - 1  # -1 because we don't count the node itself
-  return(max_length)
-}
-
-important_coaches <- c(
-  "Alastair Clarkson", "Craig McRae", "Ron Barassi", "Tom Hafey", 
-  "Leigh Matthews", "Kevin Sheedy", "Paul Roos", "Mick Malthouse"
-)
-
-depth_data <- tibble(
-  coach = important_coaches,
-  generation = map_dbl(coach, ~calculate_depth(g, .))
-) %>%
-  arrange(desc(generation))
-
-print(mentor_counts)
-print(influence_data %>% select(mentor, descendants_count))
-print(depth_data)
-cat("\nKey Coaching Lineages:\n")
-
-# I think some of that could be wrong where is JK
-
-# do old era trees 
-# Then we will do a Matthews Clarko and Hardwick tree
 
