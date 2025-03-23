@@ -12,6 +12,7 @@ library(ggplot2)
 library(igraph)
 library(ggraph)
 library(tidyverse)
+library(patchwork)
 ########
 # Get Richmond Results
 ########
@@ -1702,176 +1703,125 @@ ggplot(dynasty_performance, aes(x = team, y = avg_margin, fill = team)) +
 ######
 # Making Coaching Trees
 ######
-# VFL turned into AFL in 1990 so we will look at premiership coaches from then
-afl_premierships <- data.frame(
-  Year = 1990:2024,
-  Team = c(
-    "Collingwood", "Hawthorn", "West Coast", "Essendon", "West Coast",
-    "Carlton", "North Melbourne", "Adelaide", "Adelaide", "Kangaroos",
-    "Essendon", "Brisbane Lions", "Brisbane Lions", "Brisbane Lions", "Port Adelaide",
-    "Sydney", "West Coast", "Geelong", "Hawthorn", "Geelong",
-    "Collingwood", "Geelong", "Sydney", "Hawthorn", "Hawthorn",
-    "Hawthorn", "Western Bulldogs", "Richmond", "West Coast", "Richmond",
-    "Richmond", "Melbourne", "Geelong", "Collingwood", "Brisbane Lions"
+# AFL Coaching Tree Visualization
+afl_coaching_data <- tibble(
+  coach = c(
+    'John Kennedy Sr.', "David Parkin", "Alan Joyce", "Allan Jeans", "Robert Walls",
+    "Tony Jewell", "Alex Jesaulenko", "Ron Barassi", "Tom Hafey", "John Nicholls",
+    "John Coleman", "Norm Smith", "Bob Davis", "Phonse Kyne", "Charlie Sutton",
+    "Reg Hickey", "Dick Reynolds", "Frank Hughes", "Percy Bentley", "Jack Dyer",
+    "Jock Mchale", "Jack Bisset", "Charlie Clymo", "Albert Chadwick", "Cliff Rankin",
+    "Syd Barker Sr.", "Kevin Sheedy", "Denis Pagan", "Malcolm Blight", "Leigh Matthews",
+    "Mark Williams", "John Worsfold", "Paul Roos", "Mark Thompson", "Mick Malthouse",
+    "John Longmire", "Alastair Clarkson", "Luke Beveridge", "Damien Hardwick", "Adam Simpson",
+    "Simon Goodwin", "Chirs Scott", "Craig McRae", "Chris Fagan"
   ),
-  Captain = c(
-    "Tony Shaw", "Michael Tuck", "John Worsfold", "Mark Thompson", "John Worsfold",
-    "Stephen Kernahan", "Wayne Carey", "Mark Bickley", "Mark Bickley", "Wayne Carey",
-    "James Hird", "Michael Voss", "Michael Voss", "Michael Voss", "Warren Tredrea",
-    "Barry Hall", "Chris Judd", "Tom Harley", "Sam Mitchell", "Tom Harley",
-    "Nick Maxwell", "Cameron Ling", "Jarrad McVeigh", "Luke Hodge", "Luke Hodge",
-    "Luke Hodge", "Easton Wood", "Trent Cotchin", "Shannon Hurn", "Trent Cotchin",
-    "Trent Cotchin", "Max Gawn", "Joel Selwood", "Darcy Moore", "Harris Andrews"
+  mentor = c(
+    "Jack Hale", "John Kennedy Sr.", "John Kennedy Sr.", NA, "Ron Barassi",
+    "Tom Hafey", "Ron Barassi", "Norm Smith", NA, "Ron Barassi",
+    "Dick Reynolds", "Dick Reynolds", "Reg Hickey", "Jock Mchale", "Arthur Olliver",
+    "Cliff Rankin", NA, NA, NA, NA,
+    NA, NA, NA, NA, NA,
+    NA, "Tom Hafey", "Ron Barassi", "Ron Barassi", "John Kennedy Sr.",
+    "Fos Williams", "Mick Malthouse", "David Parkin", "Kevin Sheedy", "Tony Jewell",
+    "Paul Roos", "Malcolm Blight", "Alastair Clarkson", "Alastair Clarkson", "Denis Pagan",
+    "Paul Roos", "Leigh Matthews", "Mick Malthouse", "Alastair Clarkson"
+  )
+)
+additional_mentors_data <- tibble(
+  coach = c(
+    "John Kennedy Sr.", "Robert Walls", "Reg Hickey", "Reg Hickey", "Kevin Sheedy", 
+    "Leigh Matthews", "Leigh Matthews", "Leigh Matthews", "Leigh Matthews",
+    "Mark Williams", "Mark Williams", "Mark Williams", "Mark Williams", 
+    "John Worsfold", "John Longmire", "John Longmire", "John Longmire", "John Longmire",
+    "Alastair Clarkson", "Alastair Clarkson", "Simon Goodwin", "Simon Goodwin", "Simon Goodwin",
+    "Craig McRae", "Craig McRae", "Craig McRae", "Craig McRae", "Chris Fagan"
   ),
-  Coach = c(
-    "Leigh Matthews", "Alan Joyce", "Mick Malthouse", "Kevin Sheedy", "Mick Malthouse",
-    "David Parkin", "Denis Pagan", "Malcolm Blight", "Malcolm Blight", "Denis Pagan",
-    "Kevin Sheedy", "Leigh Matthews", "Leigh Matthews", "Leigh Matthews", "Mark Williams",
-    "Paul Roos", "John Worsfold", "Mark Thompson", "Alastair Clarkson", "Mark Thompson",
-    "Mick Malthouse", "Chris Scott", "John Longmire", "Alastair Clarkson", "Alastair Clarkson",
-    "Alastair Clarkson", "Luke Beveridge", "Damien Hardwick", "Adam Simpson", "Damien Hardwick",
-    "Damien Hardwick", "Simon Goodwin", "Chris Scott", "Craig McRae", "Chris Fagan"
+  mentor = c(
+    "Bob McCaskill", "John Nicholls", "Arthur Coghlan", "Charlie Clymo", "Tony Jewell",
+    "Bob Rose", "David Parkin", "Allan Jeans", "Tom Hafey", 
+    "John Cahil", "Tom Hafey", "Leigh Matthews", "Kevin Sheedy",
+    "David Parkin", "Rodney Eade", "Denis Pagan", "Wayne Schimelbusch", "John Kennedy Sr.",
+    "Tim Watson", "Mark Williams", "Alastair Clarkson", "Malcolm Blight", "Gary Ayres",
+    "Damien Hardwick", "Terry Wallace", "Leigh Matthews", "Alastair Clarkson", "Neale Daniher"
   )
 )
 
-print(afl_premierships)
+primary_edges <- afl_coaching_data %>%
+  select(coach, mentor) %>%
+  filter(!is.na(mentor)) %>%
+  rename(to = coach, from = mentor)
 
-# AFL Coaching Tree Visualization - John Kennedy Sr. Legacy
-# Based on the article from The Roar
+additional_edges <- additional_mentors_data %>%
+  rename(to = coach, from = mentor)
 
-# Load required libraries
-library(igraph)      # For network creation and visualization
-library(ggplot2)     # For plotting
-library(ggraph)      # For graph visualization
-library(tidyverse)   # For data manipulation
+all_edges <- bind_rows(primary_edges, additional_edges)
 
-afl_coaching_data <- tribble(
-  # The four foundational coaches mentioned in the article 
-  # https://www.theroar.com.au/2021/02/08/afl-coaching-trees-john-kennedy-snr/
-  ~coach,                 ~mentor,
-  "John Kennedy Sr",      NA,                       # Foundational coach
-  "Ron Barassi",          NA,                       # Foundational coach
-  "Tommy Hafey",          NA,                       # Foundational coach
-  "Allan Jeans",          NA,                       # Foundational coach
-  
-  # Kennedy tree
-  "David Parkin",         "John Kennedy Sr",        # Captain under Kennedy, successor
-  "Allan Joyce",          "John Kennedy Sr",        # Played in Kennedy's first flag
-  "Peter Knights",        "Allan Jeans",            # Played under Jeans, mentioned in article
-  "Leigh Matthews",       "John Kennedy Sr",        # Kennedy acolyte, also influenced by Parkin and Jeans
-  
-  # Matthews connections
-  "Chris Scott",          "Leigh Matthews",         # Mentioned in article
-  "Mark Williams",        "Leigh Matthews",         # Mentioned in article
-  
-  # Eade connections
-  "Rodney Eade",          "Allan Jeans",            # Played mostly under Jeans
-  "Paul Roos",            "Rodney Eade",            # Coached and mentored by Eade
-  
-  # North Melbourne connections
-  "Denis Pagan",          "John Kennedy Sr",        # Reserves coach under Kennedy at North
-  "John Longmire",        "Denis Pagan",            # Coached by Pagan
-  "Adam Simpson",         "Denis Pagan",            # Coached by Pagan
-  
-  # Modern Hawthorn dynasty
-  "Alastair Clarkson",    "John Kennedy Sr",        # Kennedy influence at North Melbourne
-  "Damien Hardwick",      "Alastair Clarkson",      # Assistant under Clarkson
-  "Luke Beveridge",       "Alastair Clarkson",      # Assistant under Clarkson
-  "Adam Simpson",         "Alastair Clarkson",      # Also worked under Clarkson
-  "Chris Fagan",          "Alastair Clarkson",      # Football operations under Clarkson
-  "Brendon Bolton",       "Alastair Clarkson",      # Assistant under Clarkson
-  "Leon Cameron",         "Alastair Clarkson",      # Assistant under Clarkson
-  "Brett Ratten",         "Alastair Clarkson",      # Assistant under Clarkson
-  
-  # Other key connections mentioned
-  "Kevin Sheedy",         "Tommy Hafey",            # Sheedy came up under Hafey
-  "Wayne Schimmelbusch",  "John Kennedy Sr",        # Kennedy coached at North
-  "Barry Cable",          NA,                       # North Melbourne coach mentioned
-  
-  # Additional connections from article
-  "Jack Hale",            NA,                       # Kennedy's coach
-  "Bob McCaskill",        NA                        # Early Hawthorn coach
-)
+g <- graph_from_data_frame(all_edges, directed = TRUE)
 
-coaching_graph <- graph_from_data_frame(afl_coaching_data, directed = TRUE)
+ggraph(g, layout = "sugiyama") +
+  geom_edge_link(arrow = arrow(length = unit(3, 'mm')), 
+                 end_cap = circle(3, 'mm'),
+                 alpha = 0.7) +
+  geom_node_point(color = "steelblue", size = 3) +
+  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  theme_void() +
+  labs(title = "AFL Coaching Tree",
+       subtitle = "Mentoring relationships between AFL coaches")
 
-V(coaching_graph)$size <- degree(coaching_graph, mode = "in") * 3 + 10
-V(coaching_graph)$label <- V(coaching_graph)$name
+mentor_counts <- all_edges %>%
+  count(from, sort = TRUE) %>%
+  slice_head(n = 10)
+mentor_counts
 
-V(coaching_graph)$is_main <- V(coaching_graph)$name %in% c("John Kennedy Sr", "Ron Barassi", "Tommy Hafey", "Allan Jeans")
-
-V(coaching_graph)$generation <- 0
-roots <- V(coaching_graph)[degree(coaching_graph, mode = "out") == 0]
-
-for(v in V(coaching_graph)) {
-  paths_to_roots <- shortest_paths(coaching_graph, from = v, to = roots, mode = "out")
-  min_path_length <- min(sapply(paths_to_roots$vpath, length))
-  V(coaching_graph)[v]$generation <- min_path_length - 1
+get_descendants <- function(graph, node) {
+  desc <- subcomponent(graph, node, mode = "out")
+  desc <- desc[desc != node]
+  return(names(desc))
 }
 
-V(coaching_graph)$era <- "Modern (2000+)"
-V(coaching_graph)[V(coaching_graph)$name %in% c(
-  "John Kennedy Sr", "Ron Barassi", "Tommy Hafey", "Allan Jeans", 
-  "Bob McCaskill", "Jack Hale"
-)]$era <- "Foundation (1950-1970s)"
+all_mentors <- unique(all_edges$from)
 
-V(coaching_graph)[V(coaching_graph)$name %in% c(
-  "David Parkin", "Allan Joyce", "Peter Knights", "Leigh Matthews",
-  "Denis Pagan", "Kevin Sheedy", "Wayne Schimmelbusch", "Barry Cable",
-  "Rodney Eade"
-)]$era <- "Middle Era (1980s-1990s)"
+influence_data <- tibble(
+  mentor = all_mentors,
+  descendants = map(mentor, ~get_descendants(g, .)),
+  descendants_count = map_int(descendants, length)
+) %>%
+  arrange(desc(descendants_count)) %>%
+  slice_head(n = 10)
 
-era_colors <- c("Foundation (1950-1970s)" = "#B22222",   # Firebrick
-                "Middle Era (1980s-1990s)" = "#228B22",  # Forest Green
-                "Modern (2000+)" = "#4169E1")            # Royal Blue
+root_nodes <- V(g)[degree(g, mode = "in") == 0]
+root_names <- names(root_nodes)
 
-V(coaching_graph)$shape <- ifelse(V(coaching_graph)$is_main, "square", "circle")
-V(coaching_graph)$frame.color <- ifelse(V(coaching_graph)$is_main, "gold", "gray")
-V(coaching_graph)$frame.width <- ifelse(V(coaching_graph)$is_main, 2, 0.5)
+calculate_depth <- function(graph, node) {
+  all_paths <- lapply(root_names, function(root) {
+    all_simple_paths(graph, from = root, to = node)
+  })
+    all_paths <- unlist(all_paths, recursive = FALSE)
+  if(length(all_paths) == 0) return(0)
+  
+  max_length <- max(sapply(all_paths, length)) - 1  # -1 because we don't count the node itself
+  return(max_length)
+}
 
-set.seed(42) # For reproducibility
+important_coaches <- c(
+  "Alastair Clarkson", "Craig McRae", "Ron Barassi", "Tom Hafey", 
+  "Leigh Matthews", "Kevin Sheedy", "Paul Roos", "Mick Malthouse"
+)
 
-ggraph(coaching_graph, layout = "sugiyama") + 
-  geom_edge_link(arrow = arrow(length = unit(4, 'mm')), 
-                 end_cap = circle(3, 'mm'),
-                 start_cap = circle(3, 'mm'),
-                 alpha = 0.7,
-                 color = "gray40") + 
-  geom_node_point(aes(size = size, 
-                      color = era,
-                      shape = shape),
-                  stroke = 1.5) +
-  geom_node_text(aes(label = name), 
-                 repel = TRUE, 
-                 size = 3.5, 
-                 fontface = "bold") +
-  scale_color_manual(values = era_colors, name = "Coaching Era") +
-  scale_shape_manual(values = c("circle" = 19, "square" = 15), guide = "none") +
-  scale_size_continuous(range = c(5, 18), name = "Influence\n(coaches produced)") +
-  theme_graph(background = "white") +
-  labs(title = "AFL Coaching Tree: The John Kennedy Sr. Legacy",
-       subtitle = "Based on the article from The Roar - showing connections between coaches and their mentors",
-       caption = "Node size represents number of coaches produced | Square nodes represent the four foundational coaches")
+depth_data <- tibble(
+  coach = important_coaches,
+  generation = map_dbl(coach, ~calculate_depth(g, .))
+) %>%
+  arrange(desc(generation))
 
-ggraph(coaching_graph, layout = "tree") + 
-  geom_edge_link(arrow = arrow(length = unit(4, 'mm')), 
-                 end_cap = circle(3, 'mm'),
-                 start_cap = circle(3, 'mm'),
-                 alpha = 0.7,
-                 color = "gray40") + 
-  geom_node_point(aes(size = size, 
-                      color = era,
-                      shape = shape),
-                  stroke = 1.5) +
-  geom_node_text(aes(label = name), 
-                 repel = TRUE, 
-                 size = 3.5, 
-                 fontface = "bold") +
-  scale_color_manual(values = era_colors, name = "Coaching Era") +
-  scale_shape_manual(values = c("circle" = 19, "square" = 15), guide = "none") +
-  scale_size_continuous(range = c(5, 18), name = "Influence\n(coaches produced)") +
-  theme_graph(background = "white") +
-  labs(title = "AFL Coaching Tree: Hierarchical View",
-       subtitle = "Alternative tree layout showing coaching lineages",
-       caption = "Node size represents number of coaches produced | Square nodes represent the four foundational coaches")
+print(mentor_counts)
+print(influence_data %>% select(mentor, descendants_count))
+print(depth_data)
+cat("\nKey Coaching Lineages:\n")
+
+# I think some of that could be wrong where is JK
+
+# do old era trees 
+# Then we will do a Matthews Clarko and Hardwick tree
 
